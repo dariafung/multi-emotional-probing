@@ -5,10 +5,7 @@
 - Daria Feng (yfeng266@wisc.edu) - Computer Science  
 - Eric Xu (zxu684@wisc.edu) - Statistics  
 - Shengbo Qian (sqian37@wisc.edu) - Statistics  
-- Huiyu Li (hli798@wisc.edu) - Statistics  
-
-**Course:** Stat 453, Spring 2025  
-**Team Number:** 06  
+- Huiyu Li (hli798@wisc.edu) - Statistics
 
 ---
 

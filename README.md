@@ -73,7 +73,6 @@ emotion_control_project/
 │   └── heatmap.py
 ├── generation/
 │   ├── gpt2_inject.py
-│   ├── emotion_mix.py
 │   └── eval_text.py
 ├── 01_probe_small.ipynb
 ├── 02_generation_small.ipynb

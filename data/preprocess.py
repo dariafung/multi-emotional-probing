@@ -2,8 +2,9 @@
 """
 Filtered GoEmotions Preprocessing Script
 ----------------------------------------
-Only keeps examples with at least one of the 10 selected emotions.
-For each emotion, keeps up to 2500 examples (random sample if more).
+Keeps examples with at least one of the 10 selected emotions.
+For training: up to 2500 examples per emotion.
+For validation & test: up to 250 examples per emotion.
 """
 
 import argparse
@@ -19,18 +20,19 @@ from datasets import load_dataset, Dataset
 from tqdm import tqdm
 
 # Cleaning regex
-URL_PATTERN = re.compile(r"http\S+")
-USER_PATTERN = re.compile(r"u\/\w+|@\w+")
-SUB_PATTERN = re.compile(r"r\/\w+")
-MULTI_SPACE = re.compile(r"\s{2,}")
+URL_PATTERN   = re.compile(r"http\S+")
+USER_PATTERN  = re.compile(r"u\/\w+|@\w+")
+SUB_PATTERN   = re.compile(r"r\/\w+")
+MULTI_SPACE   = re.compile(r"\s{2,}")
 
 # Target 10 emotions
-target_10_labels = [
+TARGET_10_LABELS = [
     "neutral", "admiration", "gratitude", "curiosity", "love",
     "anger", "joy", "sadness", "amusement", "confusion"
 ]
 
-EMOTION_LIMIT = 2500  # Max examples per emotion
+TRAIN_LIMIT = 2500   # max per emotion for training
+EVAL_LIMIT  = 250    # max per emotion for validation & test
 
 
 def clean_text(text: str, max_len: Optional[int] = None) -> str:
@@ -45,22 +47,23 @@ def clean_text(text: str, max_len: Optional[int] = None) -> str:
     return text
 
 
-def to_one_hot(indices: List[int], target_indices: List[int]) -> Optional[List[int]]:
+def to_one_hot(indices: List[int], target_indices: List[int]) -> Optional[List[float]]: # Hint changed
+    """Converts label indices to a multi-hot vector of floats."""
     filtered = [target_indices.index(i) for i in indices if i in target_indices]
     if not filtered:
         return None
-    vec = [0] * len(target_indices)
+    vec = [0.0] * len(target_indices) # Initialize with float 0.0
     for idx in filtered:
-        vec[idx] = 1
-    return vec
+        vec[idx] = 1.0 # Assign float 1.0
+    return vec # Return list of floats
 
-
-def filter_and_sample(dataset: Dataset, label_names: List[str]) -> Dataset:
-    """Keep only examples with at least one of the target emotions.
-    Sample max 2500 per class (based on multi-label inclusion)."""
-
-    target_indices = [label_names.index(em) for em in target_10_labels]
-    buckets = {i: [] for i in range(len(target_10_labels))}
+def filter_and_sample(dataset: Dataset,
+                      label_names: List[str],
+                      limit: int) -> Dataset:
+    """Keep only examples with at least one target emotion;
+    sample up to `limit` per emotion."""
+    target_indices = [label_names.index(em) for em in TARGET_10_LABELS]
+    buckets = {i: [] for i in range(len(TARGET_10_LABELS))}
 
     for ex in dataset:
         one_hot = to_one_hot(ex["labels"], target_indices)
@@ -71,14 +74,15 @@ def filter_and_sample(dataset: Dataset, label_names: List[str]) -> Dataset:
                 if bit == 1:
                     buckets[i].append(ex)
 
-    # Subsample
     final_data = []
     for i, samples in buckets.items():
-        if len(samples) <= EMOTION_LIMIT:
-            final_data.extend(samples)
+        count = len(samples)
+        if count <= limit:
+            chosen = samples
         else:
-            final_data.extend(random.sample(samples, EMOTION_LIMIT))
-        print(f"Emotion {target_10_labels[i]:<12} → {min(len(samples), EMOTION_LIMIT):4d} samples")
+            chosen = random.sample(samples, limit)
+        final_data.extend(chosen)
+        print(f"Emotion {TARGET_10_LABELS[i]:<12} → {len(chosen):4d} samples (out of {count})")
 
     return Dataset.from_list(final_data)
 
@@ -107,7 +111,8 @@ def main():
     print("Filtering and sampling …")
     for split in ["train", "validation", "test"]:
         print(f"\n--- Processing split: {split} ---")
-        filtered = filter_and_sample(dataset[split], label_names)
+        limit = TRAIN_LIMIT if split == "train" else EVAL_LIMIT
+        filtered = filter_and_sample(dataset[split], label_names, limit)
         preprocess_and_save(filtered, split, args.out_dir)
 
     print("Finished preprocessing all splits.")

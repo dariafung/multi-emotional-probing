@@ -94,7 +94,7 @@ def generate_with_emotion(prompt, matrix_path, emotion_name, layer_idx,
         proj_layer = nn.Linear(hidden_dim_probe, hidden_dim_gpt, bias=False).to(device)
         # Initialize projection layer (optional, but can help)
         # nn.init.xavier_uniform_(proj_layer.weight)
-        emot_vec_gpt = proj_layer(emot_vec_probe.to(device)) * 2 # Project and move to device
+        emot_vec_gpt = emot_vec_probe.to(device) * 6 # Project and move to device
     else:
         emot_vec_gpt = emot_vec_probe.to(device) # Just move to device
     # --- End Projection ---
